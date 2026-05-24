@@ -2,10 +2,13 @@ CC      = gcc
 CFLAGS  = -std=c99 -Wall -Wextra -Wpedantic -g
 TARGET  = visualSIS
 SRCDIR  = src
+TESTDIR = tests
 SRCS    = $(SRCDIR)/main.c $(SRCDIR)/args.c
 OBJS    = $(SRCS:.c=.o)
 
-.PHONY: all clean
+TEST_BINS = $(TESTDIR)/test_poly
+
+.PHONY: all clean test
 
 all: $(TARGET)
 
@@ -15,5 +18,14 @@ $(TARGET): $(OBJS)
 $(SRCDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+$(TESTDIR)/%.o: $(TESTDIR)/%.c
+	$(CC) $(CFLAGS) -I$(SRCDIR) -c -o $@ $<
+
+$(TESTDIR)/test_poly: $(TESTDIR)/test_poly.o $(SRCDIR)/poly.o
+	$(CC) $(CFLAGS) -o $@ $^
+
+test: $(TEST_BINS)
+	@for t in $(TEST_BINS); do ./$$t; done
+
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJS) $(SRCDIR)/poly.o $(TARGET) $(TEST_BINS) $(TESTDIR)/*.o

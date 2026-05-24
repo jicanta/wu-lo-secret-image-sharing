@@ -1,6 +1,8 @@
 # Build artifacts
 src/*.o
 visualSIS
+tests/*.o
+tests/test_*
 
 # Editor/IDE
 .vscode/
