@@ -54,12 +54,7 @@ void args_print_usage(const char* progname) {
 }
 
 int args_parse(int argc, char* argv[], Args* out) {
-  if (argc < 1) {
-    fprintf(stderr, "Error: no program name in argv.\n");
-    return -1;
-  }
-
-  const char* progname = argv[0];
+  const char* progname = argc > 0 ? argv[0] : "visualSSS";
 
   out->mode = MODE_DISTRIBUTE;
   out->secret_image = NULL;
