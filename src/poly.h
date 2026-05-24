@@ -1,7 +1,7 @@
 #ifndef POLY_H
 #define POLY_H
 
-#define MOD 257
+#include "commons.h"
 
 int poly_eval(const int* coeffs, int r, int x);
 

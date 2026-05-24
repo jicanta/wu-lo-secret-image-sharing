@@ -1,9 +1,7 @@
 #ifndef ARGS_H
 #define ARGS_H
 
-#define K_MIN 2
-#define K_MAX 10
-#define N_MIN 2
+#include "commons.h"
 
 typedef enum {
   MODE_DISTRIBUTE,
