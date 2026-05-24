@@ -1,6 +1,6 @@
 CC      = gcc
 CFLAGS  = -std=c99 -Wall -Wextra -Wpedantic -g
-TARGET  = visualSSS
+TARGET  = visualSIS
 SRCDIR  = src
 SRCS    = $(SRCDIR)/main.c $(SRCDIR)/args.c
 OBJS    = $(SRCS:.c=.o)
