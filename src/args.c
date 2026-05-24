@@ -18,12 +18,13 @@ static int parse_positive_int(const char* flag, const char* str, int* out) {
   return 0;
 }
 
-static int require_next(const char* flag, int i, int argc) {
-  if (i >= argc) {
+static char* next_arg(const char* flag, int* i, int argc, char* argv[]) {
+  (*i)++;
+  if (*i >= argc) {
     fprintf(stderr, "Error: '%s' requires an argument.\n", flag);
-    return -1;
+    return NULL;
   }
-  return 0;
+  return argv[(*i)++];
 }
 
 void args_print_usage(const char* progname) {
@@ -54,7 +55,7 @@ void args_print_usage(const char* progname) {
 }
 
 int args_parse(int argc, char* argv[], Args* out) {
-  const char* progname = argc > 0 ? argv[0] : "visualSSS";
+  const char* progname = argc > 0 ? argv[0] : "visualSIS";
 
   out->mode = MODE_DISTRIBUTE;
   out->secret_image = NULL;
@@ -70,11 +71,11 @@ int args_parse(int argc, char* argv[], Args* out) {
     return -1;
   }
 
-  if (strcmp(argv[i], "-d") == 0) {
+  if (strcmp(argv[i], "-d") == 0)
     out->mode = MODE_DISTRIBUTE;
-  } else if (strcmp(argv[i], "-r") == 0) {
+  else if (strcmp(argv[i], "-r") == 0)
     out->mode = MODE_RECOVER;
-  } else {
+  else {
     fprintf(stderr, "Error: first argument must be '-d' or '-r', got '%s'.\n",
             argv[i]);
     args_print_usage(progname);
@@ -87,50 +88,34 @@ int args_parse(int argc, char* argv[], Args* out) {
     args_print_usage(progname);
     return -1;
   }
-  i++;
-  if (require_next("-secret", i, argc) < 0) {
+  if (!(out->secret_image = next_arg("-secret", &i, argc, argv))) {
     args_print_usage(progname);
     return -1;
   }
-  out->secret_image = argv[i];
-  i++;
 
   if (i >= argc || strcmp(argv[i], "-k") != 0) {
     fprintf(stderr, "Error: expected '-k <num>' after '-secret'.\n");
     args_print_usage(progname);
     return -1;
   }
-  i++;
-  if (require_next("-k", i, argc) < 0) {
+  char* k_str = next_arg("-k", &i, argc, argv);
+  if (!k_str || parse_positive_int("-k", k_str, &out->k) < 0) {
     args_print_usage(progname);
     return -1;
   }
-  if (parse_positive_int("-k", argv[i], &out->k) < 0) {
-    args_print_usage(progname);
-    return -1;
-  }
-  i++;
 
   while (i < argc) {
     if (strcmp(argv[i], "-n") == 0) {
-      i++;
-      if (require_next("-n", i, argc) < 0) {
+      char* n_str = next_arg("-n", &i, argc, argv);
+      if (!n_str || parse_positive_int("-n", n_str, &out->n) < 0) {
         args_print_usage(progname);
         return -1;
       }
-      if (parse_positive_int("-n", argv[i], &out->n) < 0) {
-        args_print_usage(progname);
-        return -1;
-      }
-      i++;
     } else if (strcmp(argv[i], "-dir") == 0) {
-      i++;
-      if (require_next("-dir", i, argc) < 0) {
+      if (!(out->dir = next_arg("-dir", &i, argc, argv))) {
         args_print_usage(progname);
         return -1;
       }
-      out->dir = argv[i];
-      i++;
     } else {
       fprintf(stderr, "Error: unexpected argument '%s'.\n", argv[i]);
       args_print_usage(progname);
