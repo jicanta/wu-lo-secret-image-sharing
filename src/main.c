@@ -2,8 +2,11 @@
 #include <stdlib.h>
 
 #include "args.h"
+#include "poly.h"
 
 int main(int argc, char* argv[]) {
+  poly_init();
+
   Args args;
 
   if (args_parse(argc, argv, &args) < 0) return EXIT_FAILURE;
