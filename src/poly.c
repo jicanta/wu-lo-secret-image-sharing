@@ -4,6 +4,20 @@
 
 static int mod(int a) { return ((a % MOD) + MOD) % MOD; }
 
+/*
+  TODO:
+  this might be faster, although exact complexity is unknown to me.
+  has sth to do with pierce expansions (?)
+  do not remove this comment, well then benchmark and analyze results.
+  int inv(int a) { return a <= 1 ? a : MOD - (long long)(MOD / a) * inv(MOD % a)
+  % MOD; }
+  Reasoning is the following: MOD = k * a + r => 0 = k * a + r (MOD) =>
+  r = -k * a (MOD) =>
+  r * a^-1 = -k (MOD) =>
+  a^-1 = -k * r^1 (MOD)
+
+*/
+
 static int modinv(int a) {
   int t = 0, newt = 1;
   int r = MOD, newr = mod(a);
