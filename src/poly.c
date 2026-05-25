@@ -4,7 +4,6 @@
 
 static int mod(int a) { return ((a % MOD) + MOD) % MOD; }
 
-/* Modular inverse via extended Euclidean algorithm. MOD must be prime. */
 static int modinv(int a) {
   int t = 0, newt = 1;
   int r = MOD, newr = mod(a);
@@ -21,8 +20,6 @@ static int modinv(int a) {
   return t < 0 ? t + MOD : t;
 }
 
-/* Evaluate the Lagrange interpolating polynomial at x=0 given r (xs, ys) pairs.
- */
 static int lagrange_eval_at_zero(const int* xs, const int* ys, int r) {
   int result = 0;
   for (int i = 0; i < r; i++) {
@@ -45,15 +42,6 @@ int poly_eval(const int* coeffs, int r, int x) {
   return (int)result;
 }
 
-/*
- * Recover coefficients using Lagrange interpolation + polynomial deflation.
- *
- * At each step k:
- *   1. Evaluate the current polynomial at x=0 via Lagrange → a_k.
- *   2. Deflate: new_vals[i] = (vals[i] - a_k) / xs[i]   (mod MOD)
- *      This strips the constant term and divides out x, giving the next
- *      lower-degree polynomial evaluated at the same xs.
- */
 void lagrange_recover(const int* xs, const int* ys, int r, int* coeffs_out) {
   int vals[K_MAX];
   memcpy(vals, ys, r * sizeof(int));
