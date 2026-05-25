@@ -14,7 +14,7 @@ static int mod(int a) { return ((a % MOD) + MOD) % MOD; }
   r = -k * a (MOD) =>
   r * a^-1 = -k (MOD) =>
   a^-1 = -k * r^1 (MOD)
-  Precomputin inverses for all possible numbers (i.e. 0-255 bcs of grayvalues)
+  Precomputing inverses for all possible numbers (i.e. 0-255 bcs of grayvalues)
   sounds reasonable and should be the best option...
 */
 
