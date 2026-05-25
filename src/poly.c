@@ -41,6 +41,7 @@ void lagrange_recover(const int* xs, const int* ys, int r, int* coeffs_out) {
   for (int k = 0; k < r; k++) {
     coeffs_out[k] = lagrange_eval_at_zero(xs, vals, r);
     for (int i = 0; i < r; i++)
-      vals[i] = (int)((long)mod(vals[i] - coeffs_out[k]) * inv_table[xs[i]] % MOD);
+      vals[i] =
+          (int)((long)mod(vals[i] - coeffs_out[k]) * inv_table[xs[i]] % MOD);
   }
 }
