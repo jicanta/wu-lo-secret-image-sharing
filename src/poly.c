@@ -16,6 +16,22 @@ static int mod(int a) { return ((a % MOD) + MOD) % MOD; }
   a^-1 = -k * r^1 (MOD)
   Precomputing inverses for all possible numbers (i.e. 0-255 bcs of grayvalues)
   sounds reasonable and should be the best option...
+  int add(int a, int b){a+=b;if(a>=MOD)a-=MOD;return a;}
+int sub(int a, int b){a-=b;if(a<0)a+=MOD;return a;}
+int mul(ll a, ll b){return a*b%MOD;}
+int fpow(int b, ll e){
+        if(e<0)return 0;
+        int r=1;
+        for(;e;e>>=1,b=mul(b,b))if(e&1)r=mul(r,b);
+        return r;
+}
+ll fc[MAXF],fci[MAXF];
+void factos(){
+        fc[0]=1;
+        fore(i,1,MAXF)fc[i]=mul(fc[i-1],i);
+        fci[MAXF-1]=fpow(fc[MAXF-1],MOD-2);
+        for(ll i=MAXF-2;i>=0;i--)fci[i]=mul(fci[i+1],(i+1));
+}
 */
 
 static int modinv(int a) {
