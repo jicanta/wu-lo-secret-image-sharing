@@ -10,10 +10,10 @@ typedef enum {
 
 typedef struct {
   Mode mode;
-  char* secret_image; /* value of -secret */
-  int k;              /* value of -k */
-  int n;              /* value of -n; -1 if not provided */
-  char* dir;          /* value of -dir; NULL means current directory */
+  char* secret_image;
+  int k;
+  int n;     /* -1 if not provided */
+  char* dir; /* NULL means current directory */
 } Args;
 
 int args_parse(int argc, char* argv[], Args* out);
