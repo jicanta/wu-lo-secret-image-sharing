@@ -10,3 +10,8 @@ uint8_t prng_next_char(void) {
   seed = (seed * 0x5DEECE66DL + 0xBL) & ((1LL << 48) - 1);
   return (uint8_t)(seed >> 40);
 }
+
+void prng_permute(int64_t s, uint8_t* data, size_t len) {
+  prng_set_seed(s);
+  for (size_t i = 0; i < len; i++) data[i] ^= prng_next_char();
+}
