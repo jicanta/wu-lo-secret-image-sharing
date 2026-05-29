@@ -25,6 +25,26 @@ int poly_eval(const int* coeffs, int r, int x) {
   return (int)result;
 }
 
+void poly_share(int* coeffs, int k, int n, int* out) {
+  for (;;) {
+    int retry = 0;
+    for (int x = 1; x <= n; x++) {
+      int v = poly_eval(coeffs, k, x);
+      if (v == 256) {
+        for (int i = 0; i < k; i++)
+          if (coeffs[i] != 0) {
+            coeffs[i]--;
+            break;
+          }
+        retry = 1;
+        break;
+      }
+      out[x - 1] = v;
+    }
+    if (!retry) return;
+  }
+}
+
 void lagrange_recover(const int* xs, const int* ys, int r, int* coeffs_out) {
   int weights[K_MAX];
   for (int i = 0; i < r; i++) {
