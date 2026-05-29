@@ -3,6 +3,7 @@ src/*.o
 visualSIS
 tests/*.o
 tests/test_*
+!tests/test_*.c
 
 # Editor/IDE
 .vscode/
