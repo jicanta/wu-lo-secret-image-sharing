@@ -129,9 +129,106 @@ done:
 }
 
 static int recover(const Args* a) {
-  (void)a;
-  fprintf(stderr, "Error: recovery is not implemented yet.\n");
-  return -1;
+  Bmp* shadows = NULL;
+  char** paths = NULL;
+  int count = 0;
+  int shadows_read = 0;
+  uint8_t** ext = NULL;
+  uint8_t* q = NULL;
+  int* xs = NULL;
+  int rc = -1;
+
+  if (a->k != STEGO_K) {
+    fprintf(stderr, "Error: only k=%d is implemented yet, got k=%d.\n", STEGO_K,
+            a->k);
+    return -1;
+  }
+
+  if (dir_list_bmps(a->dir, &paths, &count) < 0) return -1;
+  if (count < a->k) {
+    fprintf(stderr, "Error: need at least k=%d shadows but found %d in '%s'.\n",
+            a->k, count, a->dir ? a->dir : ".");
+    goto done;
+  }
+
+  shadows = calloc((size_t)a->k, sizeof(Bmp));
+  ext = calloc((size_t)a->k, sizeof(uint8_t*));
+  xs = malloc((size_t)a->k * sizeof(int));
+  if (!shadows || !ext || !xs) {
+    fprintf(stderr, "Error: out of memory.\n");
+    goto done;
+  }
+
+  for (int i = 0; i < a->k; i++) {
+    if (bmp_read(paths[i], &shadows[i]) < 0) goto done;
+    shadows_read++;
+    if (shadows[i].width != shadows[0].width ||
+        shadows[i].height != shadows[0].height) {
+      fprintf(stderr, "Error: shadow '%s' has different dimensions.\n",
+              paths[i]);
+      goto done;
+    }
+    xs[i] = shadows[i].shadow_idx;
+    for (int j = 0; j < i; j++)
+      if (xs[j] == xs[i]) {
+        fprintf(stderr, "Error: shadows share index %d; need k distinct ones.\n",
+                xs[i]);
+        goto done;
+      }
+  }
+
+  size_t npix = (size_t)shadows[0].width * (size_t)shadows[0].height;
+  if (npix % (size_t)a->k != 0) {
+    fprintf(stderr, "Error: shadow has %zu pixels, not a multiple of k=%d.\n",
+            npix, a->k);
+    goto done;
+  }
+  size_t sections = npix / (size_t)a->k;
+
+  for (int i = 0; i < a->k; i++) {
+    ext[i] = malloc(sections);
+    if (!ext[i]) {
+      fprintf(stderr, "Error: out of memory.\n");
+      goto done;
+    }
+    bmp_lsb_extract(shadows[i].pixels, ext[i], sections);
+  }
+
+  q = malloc(npix);
+  if (!q) {
+    fprintf(stderr, "Error: out of memory.\n");
+    goto done;
+  }
+
+  for (size_t s = 0; s < sections; s++) {
+    int ys[K_MAX];
+    int coeffs[K_MAX];
+    for (int i = 0; i < a->k; i++) ys[i] = ext[i][s];
+    lagrange_recover(xs, ys, a->k, coeffs);
+    for (int j = 0; j < a->k; j++)
+      q[s * (size_t)a->k + (size_t)j] = (uint8_t)coeffs[j];
+  }
+
+  prng_permute((int64_t)shadows[0].seed, q, npix);
+
+  Bmp out = {0};
+  out.width = shadows[0].width;
+  out.height = shadows[0].height;
+  out.pixels = q;
+  if (bmp_write(a->secret_image, &out) < 0) goto done;
+
+  rc = 0;
+
+done:
+  free(q);
+  if (ext)
+    for (int i = 0; i < a->k; i++) free(ext[i]);
+  free(ext);
+  free(xs);
+  for (int i = 0; i < shadows_read; i++) bmp_free(&shadows[i]);
+  free(shadows);
+  if (paths) dir_free(paths, count);
+  return rc;
 }
 
 int main(int argc, char* argv[]) {
