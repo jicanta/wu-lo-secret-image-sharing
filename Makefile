@@ -6,7 +6,7 @@ TESTDIR = tests
 SRCS    = $(SRCDIR)/main.c $(SRCDIR)/args.c $(SRCDIR)/poly.c $(SRCDIR)/bmp.c $(SRCDIR)/dir.c $(SRCDIR)/prng.c
 OBJS    = $(SRCS:.c=.o)
 
-TEST_BINS = $(TESTDIR)/test_poly $(TESTDIR)/test_bmp
+TEST_BINS = $(TESTDIR)/test_poly $(TESTDIR)/test_bmp $(TESTDIR)/test_prng
 
 .PHONY: all clean test
 
@@ -25,6 +25,9 @@ $(TESTDIR)/test_poly: $(TESTDIR)/test_poly.o $(SRCDIR)/poly.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 $(TESTDIR)/test_bmp: $(TESTDIR)/test_bmp.o $(SRCDIR)/bmp.o
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(TESTDIR)/test_prng: $(TESTDIR)/test_prng.o $(SRCDIR)/prng.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 test: $(TEST_BINS)
