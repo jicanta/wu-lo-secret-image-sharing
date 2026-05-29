@@ -1,6 +1,7 @@
 #ifndef BMP_H
 #define BMP_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 typedef struct {
@@ -15,5 +16,8 @@ typedef struct {
 int bmp_read(const char* path, Bmp* out);
 int bmp_write(const char* path, const Bmp* bmp);
 void bmp_free(Bmp* bmp);
+
+void bmp_lsb_embed(uint8_t* pixels, const uint8_t* data, size_t nbytes);
+void bmp_lsb_extract(const uint8_t* pixels, uint8_t* data, size_t nbytes);
 
 #endif

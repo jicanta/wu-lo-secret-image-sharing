@@ -176,3 +176,21 @@ void bmp_free(Bmp* bmp) {
   bmp->seed = 0;
   bmp->shadow_idx = 0;
 }
+
+void bmp_lsb_embed(uint8_t* pixels, const uint8_t* data, size_t nbytes) {
+  size_t p = 0;
+  for (size_t i = 0; i < nbytes; i++)
+    for (int bit = 7; bit >= 0; bit--) {
+      pixels[p] = (uint8_t)((pixels[p] & 0xFE) | ((data[i] >> bit) & 1));
+      p++;
+    }
+}
+
+void bmp_lsb_extract(const uint8_t* pixels, uint8_t* data, size_t nbytes) {
+  size_t p = 0;
+  for (size_t i = 0; i < nbytes; i++) {
+    uint8_t v = 0;
+    for (int bit = 7; bit >= 0; bit--) v = (uint8_t)((v << 1) | (pixels[p++] & 1));
+    data[i] = v;
+  }
+}
