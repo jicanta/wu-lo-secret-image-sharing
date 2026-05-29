@@ -3,7 +3,7 @@ CFLAGS  = -std=c99 -Wall -Wextra -Wpedantic -g
 TARGET  = visualSIS
 SRCDIR  = src
 TESTDIR = tests
-SRCS    = $(SRCDIR)/main.c $(SRCDIR)/args.c $(SRCDIR)/poly.c
+SRCS    = $(SRCDIR)/main.c $(SRCDIR)/args.c $(SRCDIR)/poly.c $(SRCDIR)/bmp.c $(SRCDIR)/dir.c $(SRCDIR)/prng.c
 OBJS    = $(SRCS:.c=.o)
 
 TEST_BINS = $(TESTDIR)/test_poly $(TESTDIR)/test_bmp
