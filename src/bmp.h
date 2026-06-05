@@ -11,6 +11,8 @@ typedef struct {
   uint16_t seed;   /* PRNG seed — stored in BMP reserved bytes 6-7 */
   uint16_t
       shadow_idx; /* shadow number 1..n — stored in BMP reserved bytes 8-9 */
+  uint32_t secret_width;  /* secret image width — stored in DIB bytes 38-41 */
+  uint32_t secret_height; /* secret image height — stored in DIB bytes 42-45 */
 } Bmp;
 
 int bmp_read(const char* path, Bmp* out);

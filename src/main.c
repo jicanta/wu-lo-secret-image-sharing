@@ -9,17 +9,26 @@
 #include "poly.h"
 #include "prng.h"
 
-#define STEGO_K 8
-
-static int read_carriers(char** paths, int n, int width, int height,
-                         Bmp* out) {
+static int read_carriers(char** paths, int n, size_t min_pixels, Bmp* out) {
   int read = 0;
   for (; read < n; read++) {
     if (bmp_read(paths[read], &out[read]) < 0) goto fail;
-    if (out[read].width != width || out[read].height != height) {
+    if (out[read].width != out[0].width ||
+        out[read].height != out[0].height) {
       fprintf(stderr,
-              "Error: carrier '%s' is %dx%d but the secret is %dx%d.\n",
-              paths[read], out[read].width, out[read].height, width, height);
+              "Error: carrier '%s' is %dx%d but '%s' is %dx%d; all carriers "
+              "must share the same size.\n",
+              paths[read], out[read].width, out[read].height, paths[0],
+              out[0].width, out[0].height);
+      read++;
+      goto fail;
+    }
+    size_t px = (size_t)out[read].width * (size_t)out[read].height;
+    if (px < min_pixels) {
+      fprintf(stderr,
+              "Error: carrier '%s' has %zu pixels but the scheme needs at "
+              "least %zu.\n",
+              paths[read], px, min_pixels);
       read++;
       goto fail;
     }
@@ -42,20 +51,11 @@ static int distribute(const Args* a) {
   int* shares = NULL;
   int rc = -1;
 
-  if (a->k != STEGO_K) {
-    fprintf(stderr, "Error: only k=%d is implemented yet, got k=%d.\n", STEGO_K,
-            a->k);
-    return -1;
-  }
-
   if (bmp_read(a->secret_image, &secret) < 0) return -1;
 
   size_t npix = (size_t)secret.width * (size_t)secret.height;
-  if (npix % (size_t)a->k != 0) {
-    fprintf(stderr, "Error: secret has %zu pixels, not a multiple of k=%d.\n",
-            npix, a->k);
-    goto done;
-  }
+  size_t sections = (npix + (size_t)a->k - 1) / (size_t)a->k;
+  size_t min_pixels = sections * 8;
 
   uint16_t seed = (uint16_t)(rand() & 0xFFFF);
   prng_permute((int64_t)seed, secret.pixels, npix);
@@ -86,11 +86,9 @@ static int distribute(const Args* a) {
     goto done;
   }
 
-  if (read_carriers(paths, n, secret.width, secret.height, carriers) < 0)
-    goto done;
+  if (read_carriers(paths, n, min_pixels, carriers) < 0) goto done;
   carriers_read = n;
 
-  size_t sections = npix / (size_t)a->k;
   for (int c = 0; c < n; c++) {
     shadows[c] = malloc(sections);
     if (!shadows[c]) {
@@ -101,8 +99,10 @@ static int distribute(const Args* a) {
 
   for (size_t s = 0; s < sections; s++) {
     int coeffs[K_MAX];
-    for (int j = 0; j < a->k; j++)
-      coeffs[j] = secret.pixels[s * (size_t)a->k + (size_t)j];
+    for (int j = 0; j < a->k; j++) {
+      size_t idx = s * (size_t)a->k + (size_t)j;
+      coeffs[j] = idx < npix ? secret.pixels[idx] : 0;
+    }
     poly_share(coeffs, a->k, n, shares);
     for (int c = 0; c < n; c++) shadows[c][s] = (uint8_t)shares[c];
   }
@@ -111,6 +111,8 @@ static int distribute(const Args* a) {
     bmp_lsb_embed(carriers[c].pixels, shadows[c], sections);
     carriers[c].seed = seed;
     carriers[c].shadow_idx = (uint16_t)(c + 1);
+    carriers[c].secret_width = (uint32_t)secret.width;
+    carriers[c].secret_height = (uint32_t)secret.height;
     if (bmp_write(paths[c], &carriers[c]) < 0) goto done;
   }
 
@@ -138,12 +140,6 @@ static int recover(const Args* a) {
   int* xs = NULL;
   int rc = -1;
 
-  if (a->k != STEGO_K) {
-    fprintf(stderr, "Error: only k=%d is implemented yet, got k=%d.\n", STEGO_K,
-            a->k);
-    return -1;
-  }
-
   if (dir_list_bmps(a->dir, &paths, &count) < 0) return -1;
   if (count < a->k) {
     fprintf(stderr, "Error: need at least k=%d shadows but found %d in '%s'.\n",
@@ -168,6 +164,13 @@ static int recover(const Args* a) {
               paths[i]);
       goto done;
     }
+    if (shadows[i].secret_width != shadows[0].secret_width ||
+        shadows[i].secret_height != shadows[0].secret_height) {
+      fprintf(stderr,
+              "Error: shadow '%s' was made for a different secret size.\n",
+              paths[i]);
+      goto done;
+    }
     xs[i] = shadows[i].shadow_idx;
     for (int j = 0; j < i; j++)
       if (xs[j] == xs[i]) {
@@ -177,13 +180,20 @@ static int recover(const Args* a) {
       }
   }
 
-  size_t npix = (size_t)shadows[0].width * (size_t)shadows[0].height;
-  if (npix % (size_t)a->k != 0) {
-    fprintf(stderr, "Error: shadow has %zu pixels, not a multiple of k=%d.\n",
-            npix, a->k);
+  size_t shadow_pixels = (size_t)shadows[0].width * (size_t)shadows[0].height;
+  size_t m = (size_t)shadows[0].secret_width * (size_t)shadows[0].secret_height;
+  if (m == 0) {
+    fprintf(stderr, "Error: shadows carry no secret-size metadata.\n");
     goto done;
   }
-  size_t sections = npix / (size_t)a->k;
+  size_t sections = (m + (size_t)a->k - 1) / (size_t)a->k;
+  if (shadow_pixels < sections * 8) {
+    fprintf(stderr,
+            "Error: shadow has %zu pixels but %zu are needed to recover the "
+            "secret.\n",
+            shadow_pixels, sections * 8);
+    goto done;
+  }
 
   for (int i = 0; i < a->k; i++) {
     ext[i] = malloc(sections);
@@ -194,7 +204,7 @@ static int recover(const Args* a) {
     bmp_lsb_extract(shadows[i].pixels, ext[i], sections);
   }
 
-  q = malloc(npix);
+  q = malloc(m);
   if (!q) {
     fprintf(stderr, "Error: out of memory.\n");
     goto done;
@@ -205,15 +215,17 @@ static int recover(const Args* a) {
     int coeffs[K_MAX];
     for (int i = 0; i < a->k; i++) ys[i] = ext[i][s];
     lagrange_recover(xs, ys, a->k, coeffs);
-    for (int j = 0; j < a->k; j++)
-      q[s * (size_t)a->k + (size_t)j] = (uint8_t)coeffs[j];
+    for (int j = 0; j < a->k; j++) {
+      size_t idx = s * (size_t)a->k + (size_t)j;
+      if (idx < m) q[idx] = (uint8_t)coeffs[j];
+    }
   }
 
-  prng_permute((int64_t)shadows[0].seed, q, npix);
+  prng_permute((int64_t)shadows[0].seed, q, m);
 
   Bmp out = {0};
-  out.width = shadows[0].width;
-  out.height = shadows[0].height;
+  out.width = (int)shadows[0].secret_width;
+  out.height = (int)shadows[0].secret_height;
   out.pixels = q;
   if (bmp_write(a->secret_image, &out) < 0) goto done;
 

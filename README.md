@@ -72,13 +72,27 @@ directly to field elements without truncation.
    which are exactly the k pixels of that section in Q.
 3. After all sections are processed, Q is XOR'd with R to restore the original image O.
 
-### Steganography (k = 8)
+### Steganography
 
-Shadow pixels are embedded into carrier images using LSB replacement. Each shadow
-pixel byte is split across 8 carrier pixels by replacing the least significant bit
-of each one. The carrier images must be the same dimensions as the secret image.
+Shadow pixels are embedded into carrier images using LSB replacement: each shadow
+byte is split across 8 carrier pixels by replacing the least significant bit of each
+one. Touching a single bit changes every carrier pixel by at most ±1, so the hidden
+data stays imperceptible for any value of k.
 
-For k ≠ 8, the group defines the steganography method (documented separately).
+The amount each carrier must hold follows directly from k. If the secret has `m`
+pixels, it is split into `⌈m / k⌉` sections, so each shadow stores `⌈m / k⌉` bytes.
+At 1 bit per pixel that needs:
+
+```
+carrier pixels  ≥  8 · ⌈m / k⌉
+```
+
+For k = 8 this is exactly `m`, so the carriers match the secret (the case described
+in the assignment). For k < 8 the carriers must be larger than the secret, and for
+k > 8 they may be smaller. The carriers must all share the same dimensions; any extra
+capacity beyond `8 · ⌈m / k⌉` pixels is left untouched. When `m` is not a multiple of
+k the last section is zero-padded, and recovery trims it back using the stored secret
+size.
 
 ### Metadata stored in shadow BMPs
 
@@ -86,15 +100,20 @@ Two values are embedded in the reserved bytes of each shadow BMP's file header:
 
 - **Bytes 6–7:** PRNG seed used to generate the permutation table R (little-endian uint16)
 - **Bytes 8–9:** Shadow index 1..n (little-endian uint16)
+- **Bytes 38–41 / 42–45:** Secret image width and height (the DIB resolution fields,
+  little-endian uint32). For k ≠ 8 the shadows are larger than the secret, so its
+  real dimensions cannot be inferred from the shadow itself and are stored here.
 
 These allow recovery to work from any k shadows without prior knowledge of which
-files were used or what seed was chosen during distribution.
+files were used, what seed was chosen, or how large the secret was.
 
 ## Image requirements
 
 - Format: BMP, 8 bits per pixel (grayscale, uncompressed)
 - No extra metadata after the pixel data
-- For k = 8: all carrier images must have the same dimensions as the secret image
+- All carrier images must share the same dimensions
+- Each carrier must have at least `8 · ⌈m / k⌉` pixels (`m` = pixels in the secret);
+  for k = 8 this means the carriers match the secret size
 
 ## Source layout
 
