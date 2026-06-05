@@ -10,3 +10,6 @@ tests/test_*
 .idea/
 *.swp
 *.swo
+
+# Demo/test output
+demo/
