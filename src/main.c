@@ -89,6 +89,15 @@ static int distribute(const Args* a) {
   if (read_carriers(paths, n, min_pixels, carriers) < 0) goto done;
   carriers_read = n;
 
+  if (a->k == 8 && (carriers[0].width != secret.width ||
+                    carriers[0].height != secret.height)) {
+    fprintf(stderr,
+            "Error: for k=8 the carriers must be the same size as the secret "
+            "(%dx%d).\n",
+            secret.width, secret.height);
+    goto done;
+  }
+
   for (int c = 0; c < n; c++) {
     shadows[c] = malloc(sections);
     if (!shadows[c]) {
@@ -111,8 +120,10 @@ static int distribute(const Args* a) {
     bmp_lsb_embed(carriers[c].pixels, shadows[c], sections);
     carriers[c].seed = seed;
     carriers[c].shadow_idx = (uint16_t)(c + 1);
-    carriers[c].secret_width = (uint32_t)secret.width;
-    carriers[c].secret_height = (uint32_t)secret.height;
+    if (a->k != 8) {
+      carriers[c].secret_width = (uint16_t)secret.width;
+      carriers[c].secret_height = (uint16_t)secret.height;
+    }
     if (bmp_write(paths[c], &carriers[c]) < 0) goto done;
   }
 
@@ -164,13 +175,6 @@ static int recover(const Args* a) {
               paths[i]);
       goto done;
     }
-    if (shadows[i].secret_width != shadows[0].secret_width ||
-        shadows[i].secret_height != shadows[0].secret_height) {
-      fprintf(stderr,
-              "Error: shadow '%s' was made for a different secret size.\n",
-              paths[i]);
-      goto done;
-    }
     xs[i] = shadows[i].shadow_idx;
     for (int j = 0; j < i; j++)
       if (xs[j] == xs[i]) {
@@ -181,11 +185,31 @@ static int recover(const Args* a) {
   }
 
   size_t shadow_pixels = (size_t)shadows[0].width * (size_t)shadows[0].height;
-  size_t m = (size_t)shadows[0].secret_width * (size_t)shadows[0].secret_height;
-  if (m == 0) {
-    fprintf(stderr, "Error: shadows carry no secret-size metadata.\n");
-    goto done;
+
+  int secret_width, secret_height;
+  size_t m;
+
+  if (a->k == 8) {
+    secret_width = shadows[0].width;
+    secret_height = shadows[0].height;
+    m = shadow_pixels;
+  } else {
+    for (int i = 1; i < a->k; i++)
+      if (shadows[i].secret_width != shadows[0].secret_width ||
+          shadows[i].secret_height != shadows[0].secret_height) {
+        fprintf(stderr, "Error: shadow '%s' carries a different secret size.\n",
+                paths[i]);
+        goto done;
+      }
+    secret_width = shadows[0].secret_width;
+    secret_height = shadows[0].secret_height;
+    if (secret_width == 0 || secret_height == 0) {
+      fprintf(stderr, "Error: shadows carry no secret-size metadata.\n");
+      goto done;
+    }
+    m = (size_t)secret_width * (size_t)secret_height;
   }
+
   size_t sections = (m + (size_t)a->k - 1) / (size_t)a->k;
   if (shadow_pixels < sections * 8) {
     fprintf(stderr,
@@ -224,8 +248,8 @@ static int recover(const Args* a) {
   prng_permute((int64_t)shadows[0].seed, q, m);
 
   Bmp out = {0};
-  out.width = (int)shadows[0].secret_width;
-  out.height = (int)shadows[0].secret_height;
+  out.width = secret_width;
+  out.height = secret_height;
   out.pixels = q;
   if (bmp_write(a->secret_image, &out) < 0) goto done;
 

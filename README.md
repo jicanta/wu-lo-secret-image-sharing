@@ -96,16 +96,19 @@ size.
 
 ### Metadata stored in shadow BMPs
 
-Two values are embedded in the reserved bytes of each shadow BMP's file header:
+Two values are embedded in the reserved bytes of each shadow BMP's file header,
+exactly as the assignment requires:
 
 - **Bytes 6–7:** PRNG seed used to generate the permutation table R (little-endian uint16)
 - **Bytes 8–9:** Shadow index 1..n (little-endian uint16)
-- **Bytes 38–41 / 42–45:** Secret image width and height (the DIB resolution fields,
-  little-endian uint32). For k ≠ 8 the shadows are larger than the secret, so its
-  real dimensions cannot be inferred from the shadow itself and are stored here.
 
-These allow recovery to work from any k shadows without prior knowledge of which
-files were used, what seed was chosen, or how large the secret was.
+The secret's dimensions are needed only for k ≠ 8, where the shadows are not the
+same size as the secret. They are stored as two little-endian uint16 (width then
+height) in the DIB "important colors" field (bytes 50–53), which is advisory and
+ignored by viewers, so it never affects how the shadow displays. For k = 8 nothing
+is stored: the secret has the same size as the carriers (enunciado 4.3.2), so
+recovery takes the size from the carrier, which also makes externally produced
+(8,n) shadows such as the ones handed out by the cátedra recoverable.
 
 ## Image requirements
 

@@ -10,9 +10,9 @@ typedef struct {
   uint8_t* pixels; /* bottom-up row order (native BMP) */
   uint16_t seed;   /* PRNG seed — stored in BMP reserved bytes 6-7 */
   uint16_t
-      shadow_idx; /* shadow number 1..n — stored in BMP reserved bytes 8-9 */
-  uint32_t secret_width;  /* secret image width — stored in DIB bytes 38-41 */
-  uint32_t secret_height; /* secret image height — stored in DIB bytes 42-45 */
+      shadow_idx;         /* shadow number 1..n — stored in BMP reserved bytes 8-9 */
+  uint16_t secret_width;  /* secret width, k != 8 only — DIB bytes 50-51 */
+  uint16_t secret_height; /* secret height, k != 8 only — DIB bytes 52-53 */
 } Bmp;
 
 int bmp_read(const char* path, Bmp* out);

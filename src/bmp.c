@@ -50,8 +50,8 @@ int bmp_read(const char* path, Bmp* out) {
   int32_t height = (int32_t)read_u32(hdr + 22);
   uint16_t bpp = read_u16(hdr + 28);
   uint32_t compression = read_u32(hdr + 30);
-  uint32_t secret_width = read_u32(hdr + 38);
-  uint32_t secret_height = read_u32(hdr + 42);
+  uint16_t secret_width = read_u16(hdr + 50);
+  uint16_t secret_height = read_u16(hdr + 52);
 
   if (bpp != 8) {
     fprintf(stderr,
@@ -147,12 +147,11 @@ int bmp_write(const char* path, const Bmp* bmp) {
   write_u16(hdr + 26, 1);
   write_u16(hdr + 28, 8);
   write_u32(hdr + 34, pixel_data_size);
-  /* secret dimensions live in the DIB resolution fields so recovery can rebuild
-     the secret even when k != 8 makes the shadows larger than it; 2835 (~72 DPI)
-     is written for plain images that carry no secret metadata */
-  write_u32(hdr + 38, bmp->secret_width ? bmp->secret_width : 2835);
-  write_u32(hdr + 42, bmp->secret_height ? bmp->secret_height : 2835);
+  write_u32(hdr + 38, 2835); /* ~72 DPI */
+  write_u32(hdr + 42, 2835);
   write_u32(hdr + 46, 256);
+  write_u16(hdr + 50, bmp->secret_width);
+  write_u16(hdr + 52, bmp->secret_height);
   fwrite(hdr, 1, 54, f);
 
   /* BMP color table is BGRA, not RGBA */
