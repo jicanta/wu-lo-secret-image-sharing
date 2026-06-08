@@ -1,6 +1,6 @@
 # Build artifacts
 src/*.o
-visualSIS
+visualSSS
 tests/*.o
 tests/test_*
 !tests/test_*.c
@@ -10,6 +10,7 @@ tests/test_*
 .idea/
 *.swp
 *.swo
+.DS_Store
 
 # Demo/test output
 demo/

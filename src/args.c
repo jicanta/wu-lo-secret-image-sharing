@@ -55,7 +55,7 @@ void args_print_usage(const char* progname) {
 }
 
 int args_parse(int argc, char* argv[], Args* out) {
-  const char* progname = argc > 0 ? argv[0] : "visualSIS";
+  const char* progname = argc > 0 ? argv[0] : "visualSSS";
 
   out->mode = MODE_DISTRIBUTE;
   out->secret_image = NULL;
@@ -133,6 +133,11 @@ int args_parse(int argc, char* argv[], Args* out) {
   if (out->n != -1) {
     if (out->n < N_MIN) {
       fprintf(stderr, "Error: n must be at least %d, got %d.\n", N_MIN, out->n);
+      args_print_usage(progname);
+      return -1;
+    }
+    if (out->n > N_MAX) {
+      fprintf(stderr, "Error: n must be at most %d, got %d.\n", N_MAX, out->n);
       args_print_usage(progname);
       return -1;
     }

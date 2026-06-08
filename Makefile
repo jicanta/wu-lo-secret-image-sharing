@@ -1,6 +1,6 @@
 CC      = gcc
 CFLAGS  = -std=c99 -Wall -Wextra -Wpedantic -g
-TARGET  = visualSIS
+TARGET  = visualSSS
 SRCDIR  = src
 TESTDIR = tests
 SRCS    = $(SRCDIR)/main.c $(SRCDIR)/args.c $(SRCDIR)/poly.c $(SRCDIR)/bmp.c $(SRCDIR)/dir.c $(SRCDIR)/prng.c

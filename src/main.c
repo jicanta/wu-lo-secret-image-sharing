@@ -72,6 +72,10 @@ static int distribute(const Args* a) {
     fprintf(stderr, "Error: need %d <= k(%d) <= n(%d).\n", N_MIN, a->k, n);
     goto done;
   }
+  if (n > N_MAX) {
+    fprintf(stderr, "Error: n must be at most %d, got %d.\n", N_MAX, n);
+    goto done;
+  }
   if (count < n) {
     fprintf(stderr, "Error: need %d carriers but only %d found in '%s'.\n", n,
             count, a->dir ? a->dir : ".");

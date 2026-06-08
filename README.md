@@ -1,133 +1,57 @@
-# visualSIS — Visual Secret Image Sharing
+# visualSSS — Secreto compartido en imágenes con esteganografía
 
-Implementation of the secret image sharing scheme described in
-**"An Efficient Secret Image Sharing Scheme"** by Luang-Shyr Wu and Tsung-Ming Lo
-(National Taiwan University of Technology).
+Implementación en C del esquema de secreto compartido de Wu y Lo. Reparte una imagen secreta BMP en n imágenes portadoras (sombras): con cualquier k de ellas se reconstruye el secreto y con menos de k no se obtiene nada. Los datos de cada sombra quedan escondidos dentro de imágenes de aspecto normal mediante esteganografía LSB.
 
-The program hides a grayscale BMP image inside a set of *n* carrier images (shadows),
-such that any *k* of them are enough to reconstruct the original. Fewer than *k* shadows
-reveal nothing about the secret.
+## Compilación
 
-## Build
+Requiere gcc y C99.
 
 ```
-make
-```
-
-Requires GCC and standard C99. Produces the `visualSIS` binary.
-
-```
-make test    # run unit tests
+make            # genera el binario visualSSS
+make test       # corre los tests unitarios
 make clean
 ```
 
-## Usage
+## Uso
 
 ```
-./visualSIS -d -secret <image.bmp> -k <num> [-n <num>] [-dir <dir>]
-./visualSIS -r -secret <image.bmp> -k <num> [-n <num>] [-dir <dir>]
+./visualSSS -d -secret <imagen.bmp> -k <num> [-n <num>] [-dir <dir>]
+./visualSSS -r -secret <imagen.bmp> -k <num> [-n <num>] [-dir <dir>]
 ```
 
-| Flag | Meaning |
+| Parámetro | Significado |
 |---|---|
-| `-d` | Distribute: hide the secret inside carrier images |
-| `-r` | Recover: reconstruct the secret from shadow images |
-| `-secret` | BMP file to hide (`-d`) or to create (`-r`) |
-| `-k` | Minimum shares required to reconstruct (2 ≤ k ≤ 10) |
-| `-n` | Total shares to generate; defaults to the number of BMPs in `-dir` |
-| `-dir` | Directory of carrier images; defaults to current directory |
+| `-d` | Distribuir, esconde el secreto en las portadoras |
+| `-r` | Recuperar, reconstruye el secreto a partir de las sombras |
+| `-secret` | BMP a esconder con `-d`, o archivo de salida con `-r` |
+| `-k` | Sombras mínimas para reconstruir, entre 2 y 10 |
+| `-n` | Total de sombras a generar, por defecto la cantidad de BMP que haya en `-dir` |
+| `-dir` | Directorio de portadoras, por defecto el directorio actual |
 
-**Examples:**
+Los parámetros obligatorios (`-d` o `-r`, `-secret` y `-k`) deben ir en ese orden. Ante un error en los parámetros o en las imágenes, el programa informa el motivo y no hace nada.
 
-```
-# Hide clave.bmp into 4 shadows, requiring 2 to recover
-./visualSIS -d -secret clave.bmp -k 2 -n 4 -dir varias
+## Ejemplos de prueba
 
-# Recover from the shadows in the current directory
-./visualSIS -r -secret recovered.bmp -k 2 -n 4 -dir varias
-```
+El directorio `portadoras/` trae todo lo necesario para probar de k=2 hasta k=10. Adentro está `secreto.bmp`, que es la imagen recuperada de la cátedra (la Torre Eiffel), y una carpeta por cada k (`k2`, `k3`, hasta `k10`) con las portadoras del tamaño que ese k necesita. Las portadoras son retratos como Einstein o Marilyn, para que se note que las sombras parecen fotos comunes.
 
-## How it works
-
-### Distribution
-
-1. A random permutation table R is generated from a seed. The secret image O is XOR'd
-   with R to produce a randomised image Q, hiding pixel correlation.
-2. Q is split into consecutive sections of k pixels each: `[a0, a1, ..., a(k-1)]`.
-3. For each section, a polynomial of degree k-1 is constructed over GF(257):
-   `f(x) = a0 + a1·x + … + a(k-1)·x^(k-1) mod 257`
-4. The polynomial is evaluated at x = 1, 2, …, n to produce one shadow pixel per
-   carrier image. If any evaluation equals 256 (which cannot be stored in a byte),
-   the first non-zero coefficient is decremented by 1 and the step is retried.
-5. Each shadow pixel is hidden inside a carrier BMP using steganography.
-
-GF(257) is used instead of the original GF(251) so that pixel values 0–255 map
-directly to field elements without truncation.
-
-### Recovery
-
-1. For each section position, k shadow pixels are collected (one per shadow image),
-   together with their x-values (shadow indices).
-2. Lagrange interpolation over GF(257) recovers the k polynomial coefficients,
-   which are exactly the k pixels of that section in Q.
-3. After all sections are processed, Q is XOR'd with R to restore the original image O.
-
-### Steganography
-
-Shadow pixels are embedded into carrier images using LSB replacement: each shadow
-byte is split across 8 carrier pixels by replacing the least significant bit of each
-one. Touching a single bit changes every carrier pixel by at most ±1, so the hidden
-data stays imperceptible for any value of k.
-
-The amount each carrier must hold follows directly from k. If the secret has `m`
-pixels, it is split into `⌈m / k⌉` sections, so each shadow stores `⌈m / k⌉` bytes.
-At 1 bit per pixel that needs:
+Distribuir sobrescribe las portadoras, así que conviene trabajar sobre una copia. Por ejemplo, para k=5:
 
 ```
-carrier pixels  ≥  8 · ⌈m / k⌉
+cp -r portadoras/k5 /tmp/k5
+./visualSSS -d -secret portadoras/secreto.bmp -k 5 -dir /tmp/k5     # encripta
+./visualSSS -r -secret /tmp/recuperada.bmp -k 5 -dir /tmp/k5        # desencripta
 ```
 
-For k = 8 this is exactly `m`, so the carriers match the secret (the case described
-in the assignment). For k < 8 the carriers must be larger than the secret, and for
-k > 8 they may be smaller. The carriers must all share the same dimensions; any extra
-capacity beyond `8 · ⌈m / k⌉` pixels is left untouched. When `m` is not a multiple of
-k the last section is zero-padded, and recovery trims it back using the stored secret
-size.
+La imagen `/tmp/recuperada.bmp` se ve igual que `portadoras/secreto.bmp`. Para los demás casos se cambia el 5 por el k deseado, y `-n` toma por defecto la cantidad de portadoras de la carpeta. La recuperada difiere en cerca del 0,4% de los píxeles por el manejo del valor 256, pero a la vista es la misma imagen.
 
-### Metadata stored in shadow BMPs
-
-Two values are embedded in the reserved bytes of each shadow BMP's file header,
-exactly as the assignment requires:
-
-- **Bytes 6–7:** PRNG seed used to generate the permutation table R (little-endian uint16)
-- **Bytes 8–9:** Shadow index 1..n (little-endian uint16)
-
-The secret's dimensions are needed only for k ≠ 8, where the shadows are not the
-same size as the secret. They are stored as two little-endian uint16 (width then
-height) in the DIB "important colors" field (bytes 50–53), which is advisory and
-ignored by viewers, so it never affects how the shadow displays. For k = 8 nothing
-is stored: the secret has the same size as the carriers (enunciado 4.3.2), so
-recovery takes the size from the carrier, which also makes externally produced
-(8,n) shadows such as the ones handed out by the cátedra recoverable.
-
-## Image requirements
-
-- Format: BMP, 8 bits per pixel (grayscale, uncompressed)
-- No extra metadata after the pixel data
-- All carrier images must share the same dimensions
-- Each carrier must have at least `8 · ⌈m / k⌉` pixels (`m` = pixels in the secret);
-  for k = 8 this means the carriers match the secret size
-
-## Source layout
+Para k=8 las portadoras son directamente los archivos de la cátedra, que ya vienen con el secreto distribuido, así que ese caso solo se desencripta.
 
 ```
-src/
-  commons.h   shared constants (MOD=257, K_MIN, K_MAX, N_MIN)
-  args.h/c    command-line argument parsing
-  bmp.h/c     BMP read/write (8 bpp, handles pixel offset and row padding)
-  poly.h/c    GF(257) polynomial evaluation and Lagrange interpolation
-  main.c      entry point
-tests/
-  test_poly.c unit tests for polynomial and Lagrange functions
-  test_bmp.c  unit tests for BMP read/write including reserved-field round-trips
+./visualSSS -r -secret /tmp/recuperada.bmp -k 8 -dir portadoras/k8
 ```
+
+## Requisitos de las imágenes
+
+- BMP de 8 bits por píxel, en escala de grises, sin compresión y sin datos extra después de los píxeles.
+- Todas las portadoras de un mismo reparto deben tener el mismo tamaño.
+- Cada portadora necesita al menos 8·⌈m/k⌉ píxeles, donde m es la cantidad de píxeles del secreto. Para k=8 eso equivale al tamaño del secreto.
