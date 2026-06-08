@@ -179,6 +179,13 @@ static int recover(const Args* a) {
               paths[i]);
       goto done;
     }
+    if (shadows[i].seed != shadows[0].seed) {
+      fprintf(stderr,
+              "Error: shadow '%s' has a different seed; the shadows are not "
+              "from the same distribution.\n",
+              paths[i]);
+      goto done;
+    }
     xs[i] = shadows[i].shadow_idx;
     for (int j = 0; j < i; j++)
       if (xs[j] == xs[i]) {
